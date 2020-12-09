@@ -1,6 +1,8 @@
 from src.code.models.Model import Model
 from sklearn.metrics import r2_score
 import numpy as np
+import pandas as pd
+
 
 def train_test_split(df, train_split_size):
     total_rows, total_columns = df.shape
@@ -16,22 +18,22 @@ def train_test_split(df, train_split_size):
 
 def compute_adjusted_r2(r2, sample_size, variables_count):
 
-  return 1 - (1. - r2) * (sample_size - 1) / (sample_size - variables_count - 1)
+    return 1 - (1. - r2) * (sample_size - 1) / (sample_size - variables_count - 1)
 
 
 def scale_inverse(y, scaling_max, scaling_min):
-  return y * (scaling_max - scaling_min) + scaling_min
+    return y * (scaling_max - scaling_min) + scaling_min
+
 
 def mean_absolute_percentage_error(y_true_df, y_pred, scaling_max, scaling_min):
 
-  y_true = scale_inverse(y_true_df.values.reshape(-1), scaling_max, scaling_min)
+    y_true = scale_inverse(y_true_df.values.reshape(-1), scaling_max, scaling_min)
 
-  y_pred_work = scale_inverse(y_pred, scaling_max, scaling_min)
-  # import ipdb; ipdb.set_trace()
-  norm_diff = np.abs(y_true - y_pred_work) / y_true
+    y_pred_work = scale_inverse(y_pred, scaling_max, scaling_min)
 
-  # import ipdb; ipdb.set_trace()
-  return norm_diff.sum() * 100. / len(y_true)
+    norm_diff = np.abs(y_true - y_pred_work) / y_true
+
+    return norm_diff.sum() * 100. / len(y_true)
 
 
 class ModelValidation:
@@ -45,7 +47,6 @@ class ModelValidation:
         self.scaling_max = scaling_max
         self.scaling_min = scaling_min
 
-
     def validate(self):
         X_train, X_test = train_test_split(self.X, self.initial_train_size)
         y_train, y_test = train_test_split(self.y, self.initial_train_size)
@@ -58,7 +59,11 @@ class ModelValidation:
 
         for i in range(len(y_test)):
             y_pred[i] = self.evaluating_model.predict(X_test.iloc[i:i+1, :])
-            self.evaluating_model.train(X_test.iloc[i:i+1, :], y_test.iloc[i])
+
+            X_train_set = pd.concat([X_train, X_test.iloc[i:i+1, :]])
+            y_train_set = pd.concat([y_train, y_test.iloc[i:i+1, :]])
+
+            self.evaluating_model.train(X_train_set, y_train_set)
 
             if i % 10 == 9:
                 r2 = r2_score(y_true=y_test.iloc[:i], y_pred=y_pred[:i])
